@@ -1,0 +1,201 @@
+let board;
+let width = 400;
+let height = 400;
+let players = ['X', 'O'];
+let currentPlayer = 0;
+let available = [];
+let resultP;
+let isDemo = false;
+let twoPlayerMode = false;
+let winner = null;
+let fr = 5; // frame rate
+
+function setup() {
+    createCanvas(width, height);
+    frameRate(fr);
+  
+    resultP = createP('');
+    resultP.style('font-size', '32pt');
+    resultP.style('background', color(255, 255, 255, 210));
+    resultP.style('width', width + 'px');
+    resultP.style('height', '120px');
+    resultP.style('margin-top', '4px');
+    resultP.style('text-align', 'center');
+    resultP.style('margin-bottom', '-55px');
+
+    createCheckbox('Auto-play', false).changed(function() {
+        isDemo = this.checked();
+    });
+
+    createCheckbox('2 human player mode', false).changed(function() {
+        twoPlayerMode = this.checked();
+    });
+  
+    gameSetup();
+}
+
+function draw() {
+    background(230);
+    let w = width / 3;
+    let h = height / 3;
+    strokeWeight(4);
+
+    line(w, 0, w, height);
+    line(w * 2, 0, w * 2, height);
+    line(0, h, width, h);
+    line(0, h * 2, width, h * 2);
+
+    for (let j = 0; j < 3; j++) {
+        for (let i = 0; i < 3; i++) {
+            let x = w * i + w / 2;
+            let y = h * j + h / 2;
+            let spot = board[i][j];
+            textSize(32);
+            if (spot == players[1]) {
+                noFill();
+                ellipse(x, y, w / 2);
+            } else if (spot == players[0]) {
+                let xr = w / 4;
+                line(x - xr, y - xr, x + xr, y + xr);
+                line(x + xr, y - xr, x - xr, y + xr);
+            }
+        }
+    }
+
+    checkWinner();
+
+    let btn = createButton('Play again');
+    btn.position(height - 100, height + 85).mousePressed(function() {
+        gameSetup();
+        loop();
+    });
+
+  
+    if (winner != null) {
+        noLoop();
+    } else {
+        if (isDemo) {
+            autoTurn();
+        }
+    }
+}
+
+function equals3(a, b, c) {
+    return (a == b && b == c && a != '');
+}
+
+function checkWinner() {
+    strokeWeight(7);
+    stroke('rgba(255, 0, 0, 0.25)');
+
+    let pos = [height / 3 / 2, height / 2, height / 1.2];
+
+    // horizontal
+    for (let i = 0; i < 3; i++) {
+        if (equals3(board[i][0], board[i][1], board[i][2])) {
+            winner = board[i][0];
+            line(pos[i], 0, pos[i], height);
+        }
+    }
+
+    // vertical
+    for (let i = 0; i < 3; i++) {
+        if (equals3(board[0][i], board[1][i], board[2][i])) {
+            winner = board[0][i];
+            line(0, pos[i], width, pos[i]);
+        }
+    }
+
+    // diagonal left-right
+    if (equals3(board[0][0], board[1][1], board[2][2])) {
+        winner = board[0][0];
+        line(0, 0, width, height);
+    }
+
+    // diagonal right-left
+    if (equals3(board[2][0], board[1][1], board[0][2])) {
+        winner = board[2][0];
+        line(width, 0, 0, height);
+    }
+
+    stroke(0);
+
+    if (winner == null && available.length == 0) {
+        resultP.html("Tie!");
+        background('rgba(20, 20, 20, 0.25)');
+        winner = 'tie';
+    } else if (winner != null && winner != 'tie') {
+        resultP.html(`${winner} wins!`);
+    } else {
+        resultP.html(`${players[currentPlayer]}'s turn`);
+    }
+}
+
+function mouseClicked() {
+    if (mouseX > width || mouseY > height || winner != null) {
+        return null;
+    }
+
+    let x = 2;
+    let y = 2;
+
+    if (((width / 3) - 3) > mouseX) {
+        x = 0;
+    } else if ((mouseX > ((width / 3) - 3)) && (mouseX <= (width / 3) * 2 - 3)) {
+        x = 1;
+    }
+
+    if (((height / 3) - 3) > mouseY) {
+        y = 0;
+    } else if ((mouseY > ((height / 3) - 3)) && (mouseY <= (height / 3) * 2 - 3)) {
+        y = 1;
+    }
+
+    // check if the box isn't already occupied
+    if (board[x][y] != '') {
+        return;
+    }
+
+    board[x][y] = players[currentPlayer];
+    currentPlayer = (currentPlayer + 1) % players.length;
+
+    for (let i = 0; i < available.length; i++) {
+        if (available[i][0] == x && available[i][1] == y) {
+            available.splice(i, 1);
+        }
+    }
+
+    checkWinner();
+
+    if (!twoPlayerMode && winner == null) {
+        autoTurn();
+        checkWinner();
+    }
+}
+
+function autoTurn() {
+    let index = floor(random(available.length));
+    let spot = available.splice(index, 1)[0];
+    let i = spot[0];
+    let j = spot[1];
+    board[i][j] = players[currentPlayer];
+    currentPlayer = (currentPlayer + 1) % players.length;
+}
+
+function gameSetup() {
+    available = [];
+  
+    for (let j = 0; j < 3; j++) {
+        for (let i = 0; i < 3; i++) {
+            available.push([i, j]);
+        }
+    }
+  
+    board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+    ];
+    winner = null;
+    currentPlayer = 0;
+}
